@@ -17,7 +17,7 @@ A high-performance, Docker-ready API for scraping economic calendar data from Ba
 ### Using Docker
 
 ```bash
-git clone <your-repo>
+git clone https://github.com/aryycode/economic-calendar-api.git
 cd economic-calendar-scraper
 docker-compose up -d
 ```
