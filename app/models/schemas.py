@@ -1,0 +1,41 @@
+from pydantic import BaseModel, Field
+from typing import Optional, List, Literal
+from datetime import datetime
+
+class EconomicEvent(BaseModel):
+    year: str
+    week: str
+    month_num: str
+    month_name: str
+    day_number: str
+    week_day: str
+    time: str
+    currency_name: str
+    source_name: str
+    impact: str
+    actual: Optional[str] = None
+    forecast: Optional[str] = None
+    previous: Optional[str] = None
+    timestamp: str
+    session: Optional[str] = None
+
+class FilterParams(BaseModel):
+    impact: Optional[List[Literal["Low", "Medium", "High"]]] = None
+    pairs: Optional[List[str]] = None
+    sessions: Optional[List[Literal["Sydney", "Tokyo", "London", "NewYork"]]] = None
+    time_range: Optional[tuple[str, str]] = None
+    events: Optional[List[str]] = None
+
+class ScrapingRequest(BaseModel):
+    year: int = Field(..., description="Year to scrape")
+    weeks: List[int] = Field(..., max_items=4, description="Week numbers (max 4)")
+    filters: Optional[FilterParams] = None
+    format: Literal["daily", "weekly"] = "weekly"
+
+class ScrapingResponse(BaseModel):
+    success: bool
+    data: List[EconomicEvent]
+    total_events: int
+    weeks_scraped: List[str]
+    filters_applied: Optional[FilterParams] = None
+    execution_time: float
