@@ -40,28 +40,55 @@ class EventFilter:
             return None
 
     def apply_filters(self, events: List[EconomicEvent], filters: FilterParams) -> List[EconomicEvent]:
-        """Apply all filters to events list"""
+        """Apply all filters to events list with ROBUST filtering"""
         filtered_events = events
         
+        # Impact filter with case-insensitive matching
         if filters.impact:
-            filtered_events = [e for e in filtered_events if e.impact in filters.impact]
+            # Normalize requested impacts
+            normalized_impacts = [self._normalize_impact(imp) for imp in filters.impact]
+            filtered_events = [e for e in filtered_events 
+                             if self._normalize_impact(e.impact) in normalized_impacts]
             
+        # Currency filter (pairs) - exact match but case insensitive
         if filters.pairs:
-            filtered_events = [e for e in filtered_events if e.currency_name in filters.pairs]
+            # Normalize to uppercase for comparison
+            normalized_pairs = [pair.upper() for pair in filters.pairs]
+            filtered_events = [e for e in filtered_events 
+                             if e.currency_name.upper() in normalized_pairs]
             
+        # Sessions filter
         if filters.sessions:
             filtered_events = [e for e in filtered_events if e.session in filters.sessions]
             
+        # Events filter (keyword matching in event names)
         if filters.events:
             pattern = '|'.join(filters.events)
             filtered_events = [e for e in filtered_events 
                              if re.search(pattern, e.source_name, re.IGNORECASE)]
             
+        # Time range filter
         if filters.time_range:
             start_time, end_time = filters.time_range
             filtered_events = self._filter_by_time_range(filtered_events, start_time, end_time)
             
         return filtered_events
+
+    def _normalize_impact(self, impact: str) -> str:
+        """Normalize impact values to standard format"""
+        if not impact:
+            return 'Unknown'
+            
+        impact_lower = impact.lower().strip()
+        if impact_lower in ['low', 'l']:
+            return 'Low'
+        elif impact_lower in ['med', 'medium', 'm']:
+            return 'Medium' 
+        elif impact_lower in ['high', 'h']:
+            return 'High'
+        else:
+            # Capitalize first letter for unknown values
+            return impact.capitalize()
 
     def _filter_by_time_range(self, events: List[EconomicEvent], start_time: str, end_time: str) -> List[EconomicEvent]:
         """Filter events by time range"""
@@ -72,14 +99,18 @@ class EventFilter:
             filtered = []
             for event in events:
                 if event.time and event.time != 'All Day':
-                    event_hour = int(event.time.split(':')[0])
-                    if start_hour <= end_hour:  # Same day
-                        if start_hour <= event_hour <= end_hour:
-                            filtered.append(event)
-                    else:  # Crosses midnight
-                        if event_hour >= start_hour or event_hour <= end_hour:
-                            filtered.append(event)
-                            
+                    try:
+                        event_hour = int(event.time.split(':')[0])
+                        if start_hour <= end_hour:  # Same day
+                            if start_hour <= event_hour <= end_hour:
+                                filtered.append(event)
+                        else:  # Crosses midnight
+                            if event_hour >= start_hour or event_hour <= end_hour:
+                                filtered.append(event)
+                    except:
+                        # If time parsing fails, include the event
+                        filtered.append(event)
+                        
             return filtered
         except Exception:
             return events

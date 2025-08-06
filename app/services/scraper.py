@@ -213,13 +213,13 @@ class BabyPipsScraper:
                 logger.debug("Event data: Missing required elements")
                 return None
             
-            # Build event data
+            # Build event data with NORMALIZED impact
             event_data = {
                 **day_info,
                 'time': time_elem.text.strip() if time_elem else '',
                 'currency_name': currency_elem.text.strip() if currency_elem else '',
                 'source_name': name_elem.text.strip() if name_elem else '',
-                'impact': impact_elem.text.strip() if impact_elem else '',  # Keep original case for now
+                'impact': self._normalize_impact(impact_elem.text.strip() if impact_elem else ''),
                 'actual': actual_elem.text.strip() if actual_elem else None,
                 'forecast': forecast_elem.text.strip() if forecast_elem else None,
                 'previous': previous_elem.text.strip() if previous_elem else None,
