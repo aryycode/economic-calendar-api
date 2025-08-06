@@ -59,7 +59,7 @@ class BabyPipsScraper:
         return []
 
     def _parse_response(self, html: str, year: str, week: str) -> List[EconomicEvent]:
-        """Parse HTML response into EconomicEvent objects with robust parsing"""
+        """Parse HTML response - USING ROBUST LOGIC"""
         # Try multiple parsers
         soup = None
         parsers = ['html.parser', 'lxml', 'html5lib']
@@ -85,26 +85,14 @@ class BabyPipsScraper:
             logger.info(f"Found {len(blocks)} calendar blocks")
             
             if not blocks:
-                logger.warning("No blocks found with original class names, trying fallback")
-                # Save HTML for debugging
-                try:
-                    with open(f'debug_response_{year}_W{week}.html', 'w', encoding='utf-8') as f:
-                        f.write(html)
-                    logger.info(f"HTML saved for debugging: debug_response_{year}_W{week}.html")
-                except:
-                    pass
+                logger.warning("No blocks found")
                 return []
             
             for i, block in enumerate(blocks):
                 logger.info(f"Processing block {i+1}/{len(blocks)}")
                 
                 try:
-                    # Validate block structure
-                    if not (block.table and block.table.thead and block.table.tbody):
-                        logger.warning(f"Block {i+1}: Invalid structure (missing table/thead/tbody)")
-                        continue
-                    
-                    # Extract day information
+                    # Extract day information using ROBUST method
                     day_info = self._extract_day_info(block, year, week)
                     if not day_info:
                         logger.warning(f"Block {i+1}: Could not extract day info")
@@ -112,15 +100,25 @@ class BabyPipsScraper:
                     
                     logger.info(f"Block {i+1}: {day_info['month_name']} {day_info['day_number']} ({day_info['week_day']})")
                     
-                    # Extract events from this day
-                    event_rows = block.table.tbody.find_all('tr')
-                    logger.info(f"Block {i+1}: Found {len(event_rows)} event rows")
+                    # ✅ STRATEGY 3: Find events with robust approach (like robust_scraper)
+                    event_rows = []
+                    
+                    # Try tbody first
+                    tbody = block.find('tbody')
+                    if tbody:
+                        event_rows = tbody.find_all('tr')
+                        logger.info(f"Block {i+1}: Found {len(event_rows)} rows via tbody")
+                    else:
+                        # Fallback: find all tr in block
+                        all_trs = block.find_all('tr')
+                        # Skip first tr (likely header)
+                        event_rows = all_trs[1:] if len(all_trs) > 1 else all_trs
+                        logger.info(f"Block {i+1}: Found {len(event_rows)} rows via all tr (fallback)")
                     
                     for j, row in enumerate(event_rows):
-                        event = self._extract_event_data(row, day_info)
+                        event = self._extract_event_data_robust(row, day_info)
                         if event:
                             events.append(event)
-                            logger.debug(f"Block {i+1}, Row {j+1}: {event.currency_name} - {event.source_name}")
                         else:
                             logger.debug(f"Block {i+1}, Row {j+1}: Failed to extract event")
                             
@@ -135,28 +133,14 @@ class BabyPipsScraper:
         return events
 
     def _extract_day_info(self, block, year: str, week: str) -> Optional[dict]:
-        """Extract day information from block"""
+        """Extract day information from block - USING ROBUST LOGIC"""
         try:
-            # Validate structure - FIXED: Check for th instead of td
-            if not (block.table and block.table.thead and block.table.thead.tr):
-                logger.debug("Day info: Invalid block structure")
-                return None
-            
-            thead_tr = block.table.thead.tr
-            
-            # FIXED: Look for th elements instead of td
-            thead_cells = thead_tr.find_all(['th', 'td'])
-            if not thead_cells:
-                logger.debug("Day info: No thead cells found")
-                return None
-            
-            first_cell = thead_cells[0]  # First cell contains date info
-            
-            month_element = first_cell.find('div', class_='Table-module__month___PGbXI')
-            day_element = first_cell.find('div', class_='Table-module__dayNumber___dyJpm')
+            # ✅ STRATEGY 1: Find month/day elements ANYWHERE in the block (like robust_scraper)
+            month_element = block.find('div', class_='Table-module__month___PGbXI')
+            day_element = block.find('div', class_='Table-module__dayNumber___dyJpm')
             
             if not month_element or not day_element:
-                logger.debug("Day info: Month or day element not found")
+                logger.debug(f"Day info: month={month_element is not None}, day={day_element is not None}")
                 return None
             
             month_name = month_element.text.strip()
@@ -167,18 +151,23 @@ class BabyPipsScraper:
                 logger.debug("Day info: Skipping December in W01")
                 return None
             
-            # Get weekday - FIXED: Look for weekday in thead
+            # ✅ STRATEGY 2: Find weekday with multiple approaches (like robust_scraper)
             weekday = 'Unknown'
-            weekday_element = thead_tr.find('th', class_='Table-module__weekday___p3Buh')
+            
+            # Try original approach
+            weekday_element = block.find('td', class_='Table-module__weekday___p3Buh')
             if weekday_element:
-                # Extract text from span inside weekday element
-                weekday_span = weekday_element.find('span', class_='Table-module__weekdayContent___MzEAb')
-                if weekday_span:
-                    weekday = weekday_span.text.strip()
-                else:
-                    weekday = weekday_element.text.strip()
-                    # Clean up extra content (remove button text, etc.)
-                    weekday = weekday.split()[0] if weekday else 'Unknown'
+                weekday = weekday_element.text.strip()
+                logger.debug(f"Weekday (method 1): {weekday}")
+            else:
+                # Alternative: look for weekday in any text content
+                weekday_patterns = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+                block_text = block.get_text()
+                for pattern in weekday_patterns:
+                    if pattern in block_text:
+                        weekday = pattern
+                        logger.debug(f"Weekday (method 2): {weekday}")
+                        break
             
             return {
                 'year': year,
@@ -193,32 +182,44 @@ class BabyPipsScraper:
             logger.error(f"Error extracting day info: {e}")
             return None
 
-    def _extract_event_data(self, row, day_info: dict) -> Optional[EconomicEvent]:
-        """Extract event data from table row"""
+    def _extract_event_data_robust(self, row, day_info: dict) -> Optional[EconomicEvent]:
+        """Extract event data with ROBUST logic - exactly like robust_scraper.py"""
         try:
-            # Find all required elements
+            # ✅ Robust cell extraction (exactly like robust_scraper)
+            cells = row.find_all(['td', 'th'])
+            
+            # Find cells by class (preferred)
             time_elem = row.find('td', class_='Table-module__time___IHBtp')
             currency_elem = row.find('td', class_='Table-module__currency___gSAJ5')
             name_elem = row.find('td', class_='Table-module__name___FugPe')
             impact_elem = row.find('td', class_='Table-module__impact___kYuei')
-            
-            # Check required elements
-            if not all([time_elem, currency_elem, name_elem, impact_elem]):
-                logger.debug("Event data: Missing required elements")
-                return None
-            
-            # Optional elements
             actual_elem = row.find('td', class_='Table-module__actual___kzVNq')
             forecast_elem = row.find('td', class_='Table-module__forecast___WchYX')
             previous_elem = row.find('td', class_='Table-module__previous___F0PHu')
             
+            # ✅ Fallback: extract by position if classes don't work
+            if not all([time_elem, currency_elem, name_elem, impact_elem]) and len(cells) >= 4:
+                logger.debug("Using positional fallback for event extraction")
+                time_elem = cells[0] if len(cells) > 0 else None
+                currency_elem = cells[1] if len(cells) > 1 else None
+                name_elem = cells[2] if len(cells) > 2 else None
+                impact_elem = cells[3] if len(cells) > 3 else None
+                actual_elem = cells[4] if len(cells) > 4 else None
+                forecast_elem = cells[5] if len(cells) > 5 else None
+                previous_elem = cells[6] if len(cells) > 6 else None
+            
+            # Validate required fields
+            if not all([time_elem, currency_elem, name_elem, impact_elem]):
+                logger.debug("Event data: Missing required elements")
+                return None
+            
             # Build event data
             event_data = {
                 **day_info,
-                'time': time_elem.text.strip(),
-                'currency_name': currency_elem.text.strip(),
-                'source_name': name_elem.text.strip(),
-                'impact': self._normalize_impact(impact_elem.text.strip()),
+                'time': time_elem.text.strip() if time_elem else '',
+                'currency_name': currency_elem.text.strip() if currency_elem else '',
+                'source_name': name_elem.text.strip() if name_elem else '',
+                'impact': impact_elem.text.strip() if impact_elem else '',  # Keep original case for now
                 'actual': actual_elem.text.strip() if actual_elem else None,
                 'forecast': forecast_elem.text.strip() if forecast_elem else None,
                 'previous': previous_elem.text.strip() if previous_elem else None,
