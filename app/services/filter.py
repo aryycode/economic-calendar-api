@@ -75,7 +75,7 @@ class EventFilter:
         return filtered_events
 
     def _normalize_impact(self, impact: str) -> str:
-        """Normalize impact values to standard format"""
+        """Normalize impact values to standard format with proper capitalization"""
         if not impact:
             return 'Unknown'
             
@@ -88,7 +88,7 @@ class EventFilter:
             return 'High'
         else:
             # Capitalize first letter for unknown values
-            return impact.capitalize()
+            return impact.strip().capitalize()
 
     def _filter_by_time_range(self, events: List[EconomicEvent], start_time: str, end_time: str) -> List[EconomicEvent]:
         """Filter events by time range"""

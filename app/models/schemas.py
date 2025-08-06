@@ -20,7 +20,7 @@ class EconomicEvent(BaseModel):
     session: Optional[str] = None
 
 class FilterParams(BaseModel):
-    impact: Optional[List[Literal["Low", "Medium", "High"]]] = None
+    impact: Optional[List[str]] = None
     pairs: Optional[List[str]] = None
     sessions: Optional[List[Literal["Sydney", "Tokyo", "London", "NewYork"]]] = None
     time_range: Optional[tuple[str, str]] = None

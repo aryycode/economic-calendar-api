@@ -43,12 +43,12 @@ Comprehensive scraping with smart defaults:
   "format": "daily"
 }
 
-// Full request with all options
+// Full request with all options (impact is case-insensitive)
 {
   "year": 2025,
   "weeks": [32, 33],
   "filters": {
-    "impact": ["High", "Medium"],
+    "impact": ["high", "MEDIUM"],
     "pairs": ["USD", "EUR"],
     "sessions": ["London", "NewYork"]
   },
@@ -72,8 +72,8 @@ Quick single-week scraping with smart defaults:
 // Minimal - uses current year, current week, today's date
 GET /api/v1/scrape/quick?format=daily
 
-// With specific parameters
-GET /api/v1/scrape/quick?year=2025&week=32&format=daily&day=5&impact=High&pairs=USD,EUR
+// With specific parameters (impact is case-insensitive)
+GET /api/v1/scrape/quick?year=2025&week=32&format=daily&day=5&impact=high&pairs=USD,EUR
 ```
 
 **Query Parameters:**
@@ -97,7 +97,7 @@ Visit `http://localhost:8000/docs` for interactive API documentation.
 
 ## Filters
 
-- **Impact**: Low, Medium, High
+- **Impact**: Low, Medium, High (case-insensitive: "high", "HIGH", "High" all work)
 - **Pairs**: Any currency code (USD, EUR, GBP, etc.)
 - **Sessions**: Sydney (22:00-07:00), Tokyo (00:00-09:00), London (08:00-17:00), NewYork (13:00-22:00)
 - **Time Range**: Custom time window

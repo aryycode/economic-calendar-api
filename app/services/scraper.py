@@ -245,7 +245,7 @@ class BabyPipsScraper:
                 'time': time_elem.text.strip() if time_elem else '',
                 'currency_name': currency_elem.text.strip() if currency_elem else '',
                 'source_name': name_elem.text.strip() if name_elem else '',
-                'impact': self._normalize_impact(impact_elem.text.strip() if impact_elem else ''),
+                'impact': self.filter_service._normalize_impact(impact_elem.text.strip() if impact_elem else ''),
                 'actual': actual_elem.text.strip() if actual_elem else None,
                 'forecast': forecast_elem.text.strip() if forecast_elem else None,
                 'previous': previous_elem.text.strip() if previous_elem else None,
@@ -298,16 +298,7 @@ class BabyPipsScraper:
             logger.error(f"Error calculating timestamp: {e}")
             return "0"
 
-    def _normalize_impact(self, impact: str) -> str:
-        """Normalize impact values"""
-        impact_lower = impact.lower().strip()
-        if impact_lower in ['low', 'l']:
-            return 'Low'
-        elif impact_lower in ['med', 'medium', 'm']:
-            return 'Medium' 
-        elif impact_lower in ['high', 'h']:
-            return 'High'
-        return impact.capitalize()  # Fallback
+
 
     async def scrape_multiple_weeks(self, year: int, weeks: List[int], filters: Optional[FilterParams] = None) -> List[EconomicEvent]:
         """Scrape multiple weeks concurrently"""
