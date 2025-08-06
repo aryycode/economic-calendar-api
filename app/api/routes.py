@@ -60,7 +60,7 @@ async def scrape_economic_calendar(request: ScrapingRequest):
         
         return ScrapingResponse(
             success=True,
-            data=events,
+            economic_calendar=events,
             total_events=len(events),
             weeks_scraped=weeks_scraped,
             filters_applied=request.filters,

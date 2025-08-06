@@ -35,7 +35,7 @@ class ScrapingRequest(BaseModel):
 
 class ScrapingResponse(BaseModel):
     success: bool
-    data: List[EconomicEvent]
+    economic_calendar: List[EconomicEvent]
     total_events: int
     weeks_scraped: List[str]
     filters_applied: Optional[FilterParams] = None
