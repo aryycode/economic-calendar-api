@@ -27,8 +27,8 @@ class FilterParams(BaseModel):
     events: Optional[List[str]] = None
 
 class ScrapingRequest(BaseModel):
-    year: int = Field(..., description="Year to scrape")
-    weeks: List[int] = Field(..., max_items=4, description="Week numbers (max 4)")
+    year: Optional[int] = Field(None, description="Year to scrape (defaults to current year)")
+    weeks: Optional[List[int]] = Field(None, max_items=4, description="Week numbers (max 4, defaults to current week)")
     filters: Optional[FilterParams] = None
     format: Literal["daily", "weekly"] = "weekly"
     day: Optional[int] = Field(None, ge=1, le=31, description="Specific day of month for daily format")

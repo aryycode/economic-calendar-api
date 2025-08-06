@@ -5,6 +5,8 @@ A high-performance, Docker-ready API for scraping economic calendar data from Ba
 ## Features
 
 - **No Selenium**: Pure HTTP requests for better performance
+- **Smart Defaults**: Automatic current year, week, and day detection
+- **Daily Format**: Get events for specific days with today's date as default
 - **Advanced Filtering**: Filter by impact, currency pairs, trading sessions
 - **Concurrent Scraping**: Multi-threaded scraping for multiple weeks
 - **Docker Ready**: Complete containerization setup
@@ -33,9 +35,15 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 ### POST /api/v1/scrape
 
-Comprehensive scraping with filters:
+Comprehensive scraping with smart defaults:
 
 ```json
+// Minimal request - uses current year, current week, today's date
+{
+  "format": "daily"
+}
+
+// Full request with all options
 {
   "year": 2025,
   "weeks": [32, 33],
@@ -44,17 +52,36 @@ Comprehensive scraping with filters:
     "pairs": ["USD", "EUR"],
     "sessions": ["London", "NewYork"]
   },
-  "format": "daily"
+  "format": "daily",
+  "day": 5
 }
 ```
 
+**Parameters:**
+- `year` (optional): Defaults to current year
+- `weeks` (optional): Defaults to current week
+- `format`: "daily" or "weekly" (default: "weekly")
+- `day` (optional): Specific day for daily format, defaults to today
+- `filters` (optional): Impact, pairs, sessions, etc.
+
 ### GET /api/v1/scrape/quick
 
-Quick single-week scraping:
+Quick single-week scraping with smart defaults:
 
 ```
-GET /api/v1/scrape/quick?year=2025&week=32&impact=High&pairs=USD,EUR
+// Minimal - uses current year, current week, today's date
+GET /api/v1/scrape/quick?format=daily
+
+// With specific parameters
+GET /api/v1/scrape/quick?year=2025&week=32&format=daily&day=5&impact=High&pairs=USD,EUR
 ```
+
+**Query Parameters:**
+- `year` (optional): Defaults to current year
+- `week` (optional): Defaults to current week
+- `format` (optional): "daily" or "weekly" (default: "weekly")
+- `day` (optional): Specific day for daily format, defaults to today
+- `impact`, `pairs`, `sessions` (optional): Filters
 
 ### GET /api/v1/sessions
 
