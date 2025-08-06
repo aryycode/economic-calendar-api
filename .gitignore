@@ -34,3 +34,5 @@ logs/
 .DS_Store
 .vscode/
 .idea/
+
+check_scraper_method.py

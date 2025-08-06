@@ -18,7 +18,8 @@ class BabyPipsScraper:
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
             'Accept-Language': 'en-US,en;q=0.9',
-            'Accept-Encoding': 'gzip, deflate, br',
+            # Remove Accept-Encoding to avoid compression issues
+            # 'Accept-Encoding': 'gzip, deflate, br',
             'Connection': 'keep-alive',
             'Cache-Control': 'max-age=0',
             'Upgrade-Insecure-Requests': '1',
@@ -42,11 +43,36 @@ class BabyPipsScraper:
                 response = self.session.get(url, timeout=30)
                 response.raise_for_status()
                 
-                if len(response.text) < 1000:  # Lowered threshold
+                # Debug response headers and encoding
+                logger.info(f"Response encoding: {response.encoding}")
+                logger.info(f"Content-Encoding header: {response.headers.get('Content-Encoding', 'None')}")
+                
+                # Ensure proper text decoding
+                html_content = response.text
+                
+                # Check if content looks like compressed data
+                if html_content.startswith('\x1f\x8b') or not html_content.strip().startswith('<'):
+                    logger.warning("Response appears to be compressed or corrupted")
+                    # Try to get raw content and decode manually
+                    try:
+                        import gzip
+                        html_content = gzip.decompress(response.content).decode('utf-8')
+                        logger.info("Successfully decompressed gzip content")
+                    except:
+                        logger.error("Failed to decompress content manually")
+                        raise ValueError("Response content is corrupted")
+                
+                if len(html_content) < 1000:  # Lowered threshold
                     raise ValueError("Response too short, possibly blocked")
                 
-                logger.info(f"Response received: {len(response.text)} characters")
-                return self._parse_response(response.text, year_str, week_str)
+                logger.info(f"Response received: {len(html_content)} characters")
+                
+                # Debug: Check if HTML contains expected elements
+                if '<html' not in html_content.lower():
+                    logger.warning("Response doesn't appear to be HTML")
+                    logger.debug(f"First 200 chars: {html_content[:200]}")
+                
+                return self._parse_response(html_content, year_str, week_str)
                 
             except Exception as e:
                 logger.error(f"Error scraping {url}: {e}")

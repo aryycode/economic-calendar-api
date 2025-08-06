@@ -31,6 +31,7 @@ class ScrapingRequest(BaseModel):
     weeks: List[int] = Field(..., max_items=4, description="Week numbers (max 4)")
     filters: Optional[FilterParams] = None
     format: Literal["daily", "weekly"] = "weekly"
+    day: Optional[int] = Field(None, ge=1, le=31, description="Specific day of month for daily format")
 
 class ScrapingResponse(BaseModel):
     success: bool

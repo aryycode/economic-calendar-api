@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import List, Optional
 import time
+from datetime import datetime
 from app.models.schemas import ScrapingRequest, ScrapingResponse, FilterParams
 from app.services.scraper import BabyPipsScraper
 from app.services.filter import EventFilter
@@ -18,6 +19,7 @@ async def scrape_economic_calendar(request: ScrapingRequest):
     - **weeks**: List of week numbers (max 4 weeks)
     - **filters**: Optional filters for impact, pairs, sessions, etc.
     - **format**: Return format - "daily" or "weekly"
+    - **day**: Specific day of month (1-31) for daily format. If not provided, defaults to today's date
     """
     start_time = time.time()
     
@@ -41,9 +43,10 @@ async def scrape_economic_calendar(request: ScrapingRequest):
         # Format response based on request format
         if request.format == "daily":
             filter_service = EventFilter()
-            events_by_day = filter_service.group_by_day(events)
-            # Flatten back to list but maintain day grouping info
-            events = [event for day_events in events_by_day.values() for event in day_events]
+            # Use today's day if no day is specified
+            target_day = request.day if request.day is not None else datetime.now().day
+            # Filter events for specific day (either provided or today)
+            events = [event for event in events if int(event.day_number) == target_day]
         
         execution_time = time.time() - start_time
         weeks_scraped = [f"W{week:02d}" for week in request.weeks]
